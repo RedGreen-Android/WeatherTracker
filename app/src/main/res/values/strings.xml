@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Weather Tracker App</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="feels_like">Feels Like</string>
+    <string name="enter_an_us_city">Enter an US city</string>
+
+    <string name="min_temp_format">Min Temp: \n%s</string>
+    <string name="feels_like_format">Feels Like: \n%s</string>
+
+    <string name="max_temp_format">Max Temp: \n%s</string>
+    <string name="pressure_format">Pressure: \n%s</string>
+    <string name="humidity_format">Humidity: \n%s</string>
+
+</resources>
