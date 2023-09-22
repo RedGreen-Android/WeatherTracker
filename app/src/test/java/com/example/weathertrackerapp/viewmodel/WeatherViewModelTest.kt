@@ -22,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
@@ -33,6 +34,7 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnitRunner
 import retrofit2.Response
+import java.io.IOException
 
 
 @RunWith(MockitoJUnitRunner::class)
@@ -133,18 +135,122 @@ class WeatherViewModelTest {
             viewModel.getWeatherData()
 
             // Verify that the LiveData emits a success state with the expected data
-            val result = viewModel.weatherData.value
-            if (result != null) {
-                assertThat(result.status).isEqualTo(Status.SUCCESS)
-            }
+            val result = viewModel.weatherData.getOrAwaitValue()
+            assertThat(result.status).isEqualTo(Status.SUCCESS)
         } finally {
             // Remove the observer to avoid leaks
             viewModel.weatherData.removeObserver(observer)
         }
     }
 
+    @Test
+    fun `getWeatherData returns error`() {
+        // Define an error message
+        val errorMessage = "Error: Network Failure"
+
+        // Define a LiveData observer to capture changes
+        val observer = Observer<Resource<WeatherResponse>> {}
+
+        try {
+            runBlocking {
+                // Mock the behavior of the repository to throw an exception
+                `when`(sharedPreferences.getLocation()).thenReturn("New York")
+                `when`(repository.getWeather("New York")).thenThrow(RuntimeException("Error: Network Failure"))
+                //used RuntimeException as IOException requires my method to use this checked exception
+            }
+            // Observe the LiveData
+            viewModel.weatherData.observeForever(observer)
+
+            // Call the method under test
+            viewModel.getWeatherData()
+
+            // Verify that the LiveData emits an error state with the expected message
+            val result = viewModel.weatherData.getOrAwaitValue()
+            assertThat(result).isInstanceOf(Resource::class.java)
+            assertThat((result).message).isEqualTo(errorMessage)
+        } finally {
+            // Remove the observer to avoid leaks
+            viewModel.weatherData.removeObserver(observer)
+        }
+    }
+
+    @Test
+    fun `getWeatherByLocation data returns success`() {
+        // Define LiveData observer to capture changes
+        val observer = Observer<Resource<WeatherResponse>> {}
+
+        try {
+            // Mock behavior of the repository
+            runBlocking {
+                `when`(repository.getWeatherByLocation("100", "-100")).thenReturn(Response.success(mockResponse))
+            }
+
+            // Observe the LiveData
+            viewModel.weatherUserLocation.observeForever(observer)
+
+            viewModel.getWeatherByLocation("100", "-100")
+
+            // Verify that the LiveData emits a success state with the expected data
+            val result = viewModel.weatherUserLocation.getOrAwaitValue()
+            assertThat(result).isInstanceOf(Resource::class.java)
+            assertThat((result).data).isEqualTo(mockResponse)
+        } finally {
+            // Remove the observer to avoid leaks
+            viewModel.weatherData.removeObserver(observer)
+        }
+    }
+
+    @Test
+    fun `getWeatherByLocation returns network error`() {
+        // Define a LiveData observer to capture changes
+        val observer = Observer<Resource<WeatherResponse>> {}
+
+        // Mock the behavior of the repository to simulate a network error
+        runBlocking {
+            `when`(
+                repository.getWeatherByLocation("40.7128", "-74.0060"))
+                .thenThrow(RuntimeException("Error: Network Failure"))
+        //used RuntimeException as IOException requires my method to use this checked exception
+        }
+
+        try {
+            // Observe the LiveData
+            viewModel.weatherUserLocation.observeForever(observer)
+
+            // Call the method under test
+            viewModel.getWeatherByLocation("40.7128", "-74.0060")
+
+            // Verify that the LiveData emits a network error state
+            val result = viewModel.weatherUserLocation.getOrAwaitValue()
+            assertThat(result).isInstanceOf(Resource::class.java)
+            assertThat((result as Resource).message).isEqualTo("Error: Network Failure")
+        } finally {
+
+            // Remove the observer to avoid leaks
+            viewModel.weatherUserLocation.removeObserver(observer)
+        }
+    }
+
+    @Test
+    fun `getLatLonForCity returns coordinates for valid city`() {
+        val cityName = "Atlanta"
+        val coordinates = viewModel.getLatLonForCity(cityName)
+        assertThat(coordinates.first).isEqualTo("33.749")
+        assertThat(coordinates.second).isEqualTo("-84.388")
+    }
+
+    @Test
+    fun `getLatLonForCity returns coordinates for invalid city`() {
+        val cityName = "Invalid City"
+        val coordinates = viewModel.getLatLonForCity(cityName)
+        assertThat(coordinates.first).isNotEqualTo("100")
+        assertThat(coordinates.second).isNotEqualTo("-100")
+    }
+
     @After
     fun tearDown() {
-        // Clean up resources if necessary
+        // Clean up resources if necessary - Since I am dealing with Mockito mocks and coroutines in test, no additional cleanup needed.
+        // Usually best practice is to perform cleanup to release resources and performed tasks.
+        // In my case, MockitoAnnotations in setup takes care of not needing explicit cleanup
     }
 }

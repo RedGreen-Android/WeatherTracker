@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide
 import com.example.weathertrackerapp.R
 import com.example.weathertrackerapp.databinding.FragmentWeatherDetailBinding
 import com.example.weathertrackerapp.util.Constant
+import com.example.weathertrackerapp.util.Constant.DEFAULT_LOCATION
 import com.example.weathertrackerapp.util.Constant.REQUEST_LOCATION
 import com.example.weathertrackerapp.util.GpsLocationUtil
 import com.example.weathertrackerapp.viewmodel.WeatherViewModel
@@ -35,14 +36,8 @@ class WeatherDetailFragment : Fragment(R.layout.fragment_weather_detail) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding = FragmentWeatherDetailBinding.bind(view)
+        checkGPS()
         setupUI()
-
-        //checking GPS status
-        GpsLocationUtil(requireContext()).activateGPS(object : GpsLocationUtil.OnGpsListener {
-            override fun gpsStatus(isGPSEnable: Boolean) {
-                isGPSEnabled = isGPSEnable
-            }
-        })
         weatherObserver()
     }
 
@@ -51,15 +46,24 @@ class WeatherDetailFragment : Fragment(R.layout.fragment_weather_detail) {
         checkAndRequestLocation()
     }
 
+    private fun checkGPS(){
+        //checking GPS status
+        GpsLocationUtil(requireContext()).activateGPS(object : GpsLocationUtil.OnGpsListener {
+            override fun gpsStatus(isGPSEnable: Boolean) {
+                isGPSEnabled = isGPSEnable
+            }
+        })
+    }
+
     private fun setupUI() {
-        //upon click on search icon, populate city the user typed
+        //upon click on search icon, populate city User typed, (putting logic in a function would make code more abstract)
         binding.ivSearchCity.setOnClickListener {
-            val cityName =
+            var cityName =
                 binding.etCityName.text.toString().trim() // Remove leading/trailing spaces
             // **Ensure that user does not click on search without typing a city, handling edge cases
             if (binding.etCityName.text.toString().isEmpty()) {
                 Toast.makeText(activity, "Error: Please Enter a City", Toast.LENGTH_SHORT).show();
-            } else if (!cityName.matches(Regex("^[a-zA-Z\\s]*\$"))) {
+            } else if (!cityName.matches(Regex("^[a-zA-Z\\s,]*\$"))) {
                 // *Check if cityName contains only letters and spaces in between the word, ex:New York
                 Toast.makeText(
                     activity,
@@ -67,8 +71,14 @@ class WeatherDetailFragment : Fragment(R.layout.fragment_weather_detail) {
                     Toast.LENGTH_SHORT
                 ).show()
             } else {
-                val newCity = binding.etCityName.text.toString()
-                weatherViewModel.sharedPreference.setLocation(newCity)
+                //Hack to make sure ONLY "US" cities (US Country code) is shown,
+                //as Rest Api Query is "q={city name},{country code} ex: Atlanta,US
+                val cityUS = if (cityName.endsWith(",US")) {
+                    cityName
+                } else {
+                    "$cityName,US"
+                }
+                weatherViewModel.sharedPreference.setLocation(cityUS)
                 weatherViewModel.sharedPreference.setSearched(true)
                 weatherViewModel.getWeatherData()
             }
@@ -85,8 +95,8 @@ class WeatherDetailFragment : Fragment(R.layout.fragment_weather_detail) {
          */
         if (weatherViewModel.sharedPreference.isSearched()) {
             // Location data is available, use it to fetch weather data
-            val lastSearchedCity = weatherViewModel.sharedPreference.getLocation()
-            val (latitude, longitude) = weatherViewModel.getLatLonForCity(lastSearchedCity!!)
+            val lastSearchedCity: String = weatherViewModel.sharedPreference.getLocation() ?: DEFAULT_LOCATION
+            val (latitude, longitude) = weatherViewModel.getLatLonForCity(lastSearchedCity)
             weatherViewModel.getWeatherByLocation(latitude, longitude)
         } else {
             // Location data is not available, use the last searched city

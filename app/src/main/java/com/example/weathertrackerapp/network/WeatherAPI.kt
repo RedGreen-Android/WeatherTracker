@@ -12,8 +12,9 @@ interface WeatherAPI {
 
     @GET(API_ENDPOINT)
     suspend fun getWeather(
-        @Query("q") location:String = "Dallas",
-        @Query("appid") apiKey: String = Constant.API_KEY
+        @Query("q") location:String,
+        @Query("appid") apiKey: String = Constant.API_KEY,
+        @Query("country") country: String = "US"
     ): Response<WeatherResponse>
 
     @GET(API_ENDPOINT)
@@ -22,6 +23,7 @@ interface WeatherAPI {
         latitude:String,
         @Query("lon")
         longitude:String,
-        @Query("appid") apiKey: String = Constant.API_KEY
+        @Query("appid") apiKey: String = Constant.API_KEY,
+        @Query("country") country: String = "US"
     ):Response<WeatherResponse>
 }
