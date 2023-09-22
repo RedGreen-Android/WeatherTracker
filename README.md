@@ -8,7 +8,7 @@ Auto-Load last searched city upon app launch. Fetch and Cache weather icon of th
 
 Screenshot 1: Once user has granted access up first launch of app. Fetch and display data of current location
 
-![app_launch_request_location](https://github.com/RedGreen-Android/WeatherTracker/assets/83381250/ce0b3ea2-b7e1-4009-a373-7d460b83b27d)
+![app_first_launch](https://github.com/RedGreen-Android/WeatherTracker/assets/83381250/52d6fa60-a2a7-4e57-b1f0-191803093b68)
 
 Screenshot 2: During "First launch" of the app, it will prompt user for Location permission.
 
